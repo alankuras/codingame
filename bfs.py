@@ -1,6 +1,5 @@
 from collections import deque
 from typing import List
-
 graph = {
     "A": ["B", "C"],
     "B": ["C", "I"],
