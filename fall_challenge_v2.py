@@ -1,13 +1,8 @@
 import sys
-import math
-from typing import List
 from itertools import chain
-from pandas import DataFrame
 import random
 from enum import Enum
-from dataclasses import dataclass
-from scipy import spatial
-import numpy as np
+import datetime
 
 
 class Owner(Enum):
@@ -69,8 +64,6 @@ class GameBoard:
         self._top_sentinel = (0, 0)
         self._bottom_sentinel = (0, 0)
 
-        
-
     @property
     def recyclers(self):
         return len([x for x in chain.from_iterable(self.tiles) if x.recycler and x.owner == Owner.PLAYER])
@@ -127,7 +120,7 @@ class Score:
         self.player, self.enemy = [int(i) for i in input().split()]
 
     def __repr__(self):
-        return (f"SCORE: player: {self.player}, enemy: {self.enemy}")
+        return f"SCORE: player: {self.player}, enemy: {self.enemy}"
 
 
 class Actions:
@@ -146,22 +139,23 @@ class Actions:
             print(message, file=sys.stderr, flush=True)
 
     def spawn(self, tile: Tile, no_units: int = 1):
-        self.actions.append((f"SPAWN {no_units} {tile.w} {tile.h}"))
+        self.actions.append(f"SPAWN {no_units} {tile.w} {tile.h}")
 
     def move(self, tile: Tile, to_h, to_w, no_units: int = 1):
-        self.actions.append((f"MOVE {no_units} {tile.w} {tile.h} {to_w} {to_h}"))
+        self.actions.append(f"MOVE {no_units} {tile.w} {tile.h} {to_w} {to_h}")
 
     def build(self, tile: Tile):
-        self.actions.append((f"BUILD {tile.w} {tile.h}"))
+        self.actions.append(f"BUILD {tile.w} {tile.h}")
 
     def move_to(self, tile: Tile, position: POSITION, no_units: int = 1):
         self.actions.append(
-            (f"MOVE {no_units} {tile.w} {tile.h} {tile.w + position.value[0]} {tile.h + position.value[0]}"))
+            f"MOVE {no_units} {tile.w} {tile.h} {tile.w + position.value[0]} {tile.h + position.value[0]}")
 
 
 class Strategies:
     def __init__(self):
         self._strategy_sets = []
+
 
     def spawn_units_randomly(self, game_board: GameBoard, actions: Actions):
         for unit in range(score.player // 10):
@@ -169,12 +163,14 @@ class Strategies:
             if tile.can_spawn:
                 actions.spawn(tile=tile, no_units=1)
 
+
     def spawn_units_right(self, game_board: GameBoard, actions: Actions):
         tiles = sorted([x for x in game_board.get_tiles(Owner.PLAYER) if x.units == 0], key=lambda x: x.w, reverse=True)
         for tile in tiles:
             if tile.can_spawn and score.player >= 10:
                 actions.spawn(tile=tile, no_units=1)
                 score.player -= 10
+
 
     def spawn_units_left(self, game_board: GameBoard, actions: Actions):
         tiles = sorted([x for x in game_board.get_tiles(Owner.PLAYER) if x.units == 0], key=lambda x: x.w,
@@ -184,11 +180,14 @@ class Strategies:
                 actions.spawn(tile=tile, no_units=1)
                 score.player -= 10
 
+
     def increase_units_randomly(self, game_board: GameBoard, actions: Actions):
         for unit in range(score.player // 10):
-            tile = random.choice([x for x in game_board.get_tiles(unit_owner=Owner.PLAYER) if x.units > 0 and not x.recycler])
+            tile = random.choice(
+                [x for x in game_board.get_tiles(unit_owner=Owner.PLAYER) if x.units > 0 and not x.recycler])
             if tile.can_spawn:
                 actions.spawn(tile=tile, no_units=1)
+
 
     def spawn_units_near_enemies(self, game_board: GameBoard, actions: Actions):
         for tile in game_board.get_tiles(Owner.PLAYER):
@@ -199,21 +198,26 @@ class Strategies:
                 pos4 = (tile.h, tile.w - 1)
 
                 if game_board.tile_on_board(*pos) and game_board.find_tiles(
-                        *pos).owner == Owner.ENEMY and game_board.find_tiles(*pos).has_units and not game_board.find_tiles(*pos).recycler:
+                        *pos).owner == Owner.ENEMY and game_board.find_tiles(
+                    *pos).has_units and not game_board.find_tiles(*pos).recycler:
                     actions.spawn(tile=tile, no_units=1)
                     continue
                 elif game_board.tile_on_board(*pos2) and game_board.find_tiles(
-                        *pos2).owner == Owner.ENEMY and game_board.find_tiles(*pos2).has_units and not game_board.find_tiles(*pos2).recycler:
+                        *pos2).owner == Owner.ENEMY and game_board.find_tiles(
+                    *pos2).has_units and not game_board.find_tiles(*pos2).recycler:
                     actions.spawn(tile=tile, no_units=1)
                     continue
                 elif game_board.tile_on_board(*pos3) and game_board.find_tiles(
-                        *pos3).owner == Owner.ENEMY and game_board.find_tiles(*pos3).has_units and not game_board.find_tiles(*pos3).recycler:
+                        *pos3).owner == Owner.ENEMY and game_board.find_tiles(
+                    *pos3).has_units and not game_board.find_tiles(*pos3).recycler:
                     actions.spawn(tile=tile, no_units=1)
                     continue
                 elif game_board.tile_on_board(*pos4) and game_board.find_tiles(
-                        *pos4).owner == Owner.ENEMY and game_board.find_tiles(*pos4).has_units and not game_board.find_tiles(*pos4).recycler:
+                        *pos4).owner == Owner.ENEMY and game_board.find_tiles(
+                    *pos4).has_units and not game_board.find_tiles(*pos4).recycler:
                     actions.spawn(tile=tile, no_units=1)
                     continue
+
 
     def _check_and_move(self, tile: Tile, to_h, to_w, game_board: GameBoard, actions: Actions,
                         compare_units_count=False):
@@ -230,6 +234,7 @@ class Strategies:
                 return True
             return False
 
+
     def _check_and_move_to(self, tile: Tile, position: POSITION, game_board: GameBoard, actions: Actions):
         to_h = tile.h + position.value[0]
         to_w = tile.w + position.value[1]
@@ -240,7 +245,6 @@ class Strategies:
             game_board.tiles[to_h][to_w].owner = Owner.PLAYER
             return True
         return False
-
 
 
     def go_to_far_left(self, game_board: GameBoard, actions: Actions):
@@ -265,6 +269,7 @@ class Strategies:
                 self.find_something_on_the_board(game_board=game_board, actions=actions, tile=tile)
         self.spawn_units_left(game_board=game_board, actions=actions)
 
+
     def go_to_far_right(self, game_board: GameBoard, actions: Actions):
         for tile in game_board.get_player_tiles_with_units():
             for unit in range(tile.units):
@@ -287,11 +292,13 @@ class Strategies:
                 self.find_something_on_the_board(game_board=game_board, actions=actions, tile=tile)
         self.spawn_units_right(game_board=game_board, actions=actions)
 
+
     def go_to_the_edge(self, game_board: GameBoard, actions: Actions):
         if game_board.starting_position == StartingPosition.LEFT:
             self.go_to_far_right(game_board=game_board, actions=actions)
         else:
             self.go_to_far_left(game_board=game_board, actions=actions)
+
 
     def build_recycler_when_near_enemy_fields(self, game_board: GameBoard, actions: Actions, max_recyclers=10):
         if game_board.recyclers < max_recyclers:
@@ -314,6 +321,7 @@ class Strategies:
                     elif game_board.tile_on_board(*pos4) and game_board.find_tiles(*pos4).owner == Owner.ENEMY:
                         actions.build(tile)
                         continue
+
 
     def build_recycler_when_spotted_units(self, game_board: GameBoard, actions: Actions, max_recyclers=10):
         if game_board.recyclers < max_recyclers:
@@ -341,11 +349,13 @@ class Strategies:
                         actions.build(tile)
                         continue
 
+
     def free_hunt(self, game_board: GameBoard, actions: Actions):
         for tile in game_board.get_player_tiles_with_units():
             for t in game_board.get_player_tiles_with_units(Owner.ENEMY):
                 actions.spawn(tile=tile, no_units=1)
                 actions.move(tile, t.h, t.w, tile.units)
+
 
     def take_closest(self, game_board: GameBoard, actions: Actions):
         for tile in game_board.get_player_tiles_with_units():
@@ -385,67 +395,60 @@ class Strategies:
                     moved = True
                     break
 
+
     def find_something_on_the_board(self, game_board: GameBoard, actions: Actions, tile: Tile):
         for t in game_board.get_tiles(Owner.ENEMY):
             actions.move(tile=tile, to_h=t.h, to_w=t.w)
             break
 
+
     def activate_top_sentinel(self, game_board: GameBoard, actions: Actions):
         sentinel = game_board._top_sentinel
         if sentinel.h > 0:  # type: ignore
-            #actions.debug(f"SENTINEL ACTIVE")
-            if sentinel.h -2 > 0:
+            # actions.debug(f"SENTINEL ACTIVE")
+            if sentinel.h - 2 > 0:
                 actions.move(tile=sentinel, to_h=sentinel.h - 2, to_w=sentinel.w)  # type: ignore
             else:
                 actions.move(tile=sentinel, to_h=sentinel.h - 1, to_w=sentinel.w)
             actions.spawn(sentinel, 1)  # type: ignore
             sentinel.h = sentinel.h - 1  # type: ignore
 
+
     def activate_bottom_sentinel(self, game_board: GameBoard, actions: Actions):
         sentinel = game_board._bottom_sentinel
         if sentinel.h < game_board.height:  # type: ignore
-           # actions.debug(f"SENTINEL ACTIVE")
+            # actions.debug(f"SENTINEL ACTIVE")
             actions.spawn(sentinel, 1)
             actions.move(tile=sentinel, to_h=sentinel.h + 2, to_w=sentinel.w)  # type: ignore
-            sentinel.h = sentinel.h + 1  # type: ignore        
+            sentinel.h = sentinel.h + 1  # type: ignore
+
 
     def fill_bottom_with_units(self, game_board: GameBoard, actions: Actions):
         for tile in [x for x in game_board.get_tiles(Owner.PLAYER) if not x.recycler and x.units == 0][::-1]:
-            if score.player >=10:
+            if score.player >= 10:
                 actions.spawn(tile=tile, no_units=1)
                 break
+
 
 game_board = GameBoard(*[int(i) for i in input().split()])
 score = Score()
 strategies = Strategies()
 
 while True:
+    a = datetime.datetime.now()
     actions = Actions(debug_on=True)
     score.update()
     game_board.update_field()
     game_board.starting_position
     if score.turn < game_board.width:
-        #actions.message(message="PHASE 1")
         strategies.activate_top_sentinel(game_board=game_board, actions=actions)
         strategies.activate_bottom_sentinel(game_board=game_board, actions=actions)  # wywalic go tp ?
         strategies.spawn_units_near_enemies(game_board=game_board, actions=actions)
         strategies.build_recycler_when_spotted_units(game_board=game_board, actions=actions, max_recyclers=10)
         strategies.go_to_the_edge(game_board=game_board, actions=actions)
-        #strategies.fill_bottom_with_units(game_board=game_board, actions=actions)
-
-        """
-        if score.turn < 2:
-            for tile in [x for x in game_board.get_tiles(Owner.PLAYER) if x.can_build]:
-                actions.build(tile)
-                break
-        """
     else:
-        #actions.message(message="PHASE 2")
         strategies.take_closest(game_board=game_board, actions=actions)
         strategies.build_recycler_when_spotted_units(game_board=game_board, actions=actions, max_recyclers=15)
         strategies.spawn_units_near_enemies(game_board=game_board, actions=actions)
         strategies.spawn_units_randomly(game_board=game_board, actions=actions)
-
-        # strategies.free_hunt(game_board=game_board, actions=actions)
-
     actions.wait()
